@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const input_data = @embedFile("./input");
-const LocationID = u32;
+const LocationId = u32;
 
-fn parse_line(line_data: []const u8) ![2]LocationID {
+fn parse_line(data: []const u8) ![2]LocationId {
     // retrieve exactly two non-space slices from the line data
-    var entry_iterator = std.mem.tokenizeScalar(u8, line_data, ' ');
+    var entry_iterator = std.mem.tokenizeScalar(u8, data, ' ');
     const first_entry = entry_iterator.next() orelse {
         return error.InvalidFormat;
     };
@@ -17,8 +17,8 @@ fn parse_line(line_data: []const u8) ![2]LocationID {
     std.debug.assert(entry_iterator.peek() == null);
 
     // convert slices to IDs
-    const first_id = try std.fmt.parseInt(LocationID, first_entry, 10);
-    const second_id = try std.fmt.parseInt(LocationID, second_entry, 10);
+    const first_id = try std.fmt.parseInt(LocationId, first_entry, 10);
+    const second_id = try std.fmt.parseInt(LocationId, second_entry, 10);
 
     // done
     return .{ first_id, second_id };
@@ -26,9 +26,94 @@ fn parse_line(line_data: []const u8) ![2]LocationID {
 
 test "parse_line" {
     const correct_line = "81510   22869";
-    const correct_ids: [2]LocationID = .{ 81510, 22869 };
+    const correct_ids: [2]LocationId = .{ 81510, 22869 };
     const parsed_ids = try parse_line(correct_line);
     try std.testing.expectEqual(correct_ids, parsed_ids);
+}
+
+const Input = struct {
+    const Self = @This();
+    const LocationIdArrayList = std.ArrayListUnmanaged(LocationId);
+
+    allocator: std.mem.Allocator = undefined,
+    left_ids: LocationIdArrayList = undefined,
+    right_ids: LocationIdArrayList = undefined,
+
+    pub fn init(self: *Self, allocator: std.mem.Allocator, data: []const u8) !usize {
+        var left_ids: LocationIdArrayList = .{};
+        var right_ids: LocationIdArrayList = .{};
+
+        errdefer {
+            left_ids.deinit(allocator);
+            right_ids.deinit(allocator);
+        }
+
+        // parse input data
+        var line_iterator = std.mem.tokenizeScalar(u8, data, '\n');
+        while (line_iterator.next()) |line| {
+            const line_ids = try parse_line(line);
+            try left_ids.append(allocator, line_ids[0]);
+            try right_ids.append(allocator, line_ids[1]);
+        }
+
+        std.debug.assert(left_ids.items.len == right_ids.items.len);
+
+        // initialize input data struct
+        self.* = .{
+            .allocator = allocator,
+            .left_ids = left_ids,
+            .right_ids = right_ids,
+        };
+
+        // return total number of loaded IDs
+        return self.left_ids.items.len;
+    }
+
+    pub fn deinit(self: *Self) void {
+        self.left_ids.deinit(self.allocator);
+        self.right_ids.deinit(self.allocator);
+    }
+};
+
+fn part1(allocator: std.mem.Allocator) !usize {
+    // load input data
+    var input: Input = .{};
+    const loaded_ids = try input.init(allocator, input_data);
+    defer input.deinit();
+
+    std.debug.assert(loaded_ids == 1000);
+
+    // sort each list of IDs in ascending order
+    std.mem.sort(LocationId, input.left_ids.items, {}, comptime std.sort.asc(LocationId));
+    std.mem.sort(LocationId, input.right_ids.items, {}, comptime std.sort.asc(LocationId));
+
+    // calculate total difference between the two lists
+    var difference_sum: usize = 0;
+    for (input.left_ids.items, input.right_ids.items) |left_id, right_id| {
+        const smallest = @min(left_id, right_id);
+        const largest = @max(left_id, right_id);
+        difference_sum += @intCast(largest - smallest);
+    }
+
+    return difference_sum;
+}
+
+fn part2(allocator: std.mem.Allocator) !usize {
+    // load input data
+    var input: Input = .{};
+    const loaded_ids = try input.init(allocator, input_data);
+    defer input.deinit();
+
+    std.debug.assert(loaded_ids == 1000);
+
+    // calculate total similarity between the two lists
+    var similarity_sum: usize = 0;
+    for (input.left_ids.items) |left_id| {
+        const right_ids_count = std.mem.count(LocationId, input.right_ids.items, &.{ left_id });
+        similarity_sum += @intCast(left_id * right_ids_count);
+    }
+
+    return similarity_sum;
 }
 
 pub fn main() !void {
@@ -37,42 +122,15 @@ pub fn main() !void {
     defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
     const allocator = general_purpose_allocator.allocator();
 
-    // load input data
-    var left_ids = std.ArrayList(LocationID).init(allocator);
-    defer left_ids.deinit();
+    // part1
+    const difference = try part1(allocator);
 
-    var right_ids = std.ArrayList(LocationID).init(allocator);
-    defer right_ids.deinit();
+    std.debug.assert(difference == 3574690);
+    std.debug.print("total difference: {}\n", .{ difference });
 
-    var line_iterator = std.mem.tokenizeScalar(u8, input_data, '\n');
-    while (line_iterator.next()) |line| {
-        const line_ids = try parse_line(line);
-        try left_ids.append(line_ids[0]);
-        try right_ids.append(line_ids[1]);
-    }
+    // part2
+    const similarity = try part2(allocator);
 
-    std.debug.assert(left_ids.items.len == right_ids.items.len);
-    std.debug.print("loaded {} location IDs\n", .{ left_ids.items.len });
-
-    // PART1
-    std.mem.sort(LocationID, left_ids.items, {}, comptime std.sort.asc(LocationID));
-    std.mem.sort(LocationID, right_ids.items, {}, comptime std.sort.asc(LocationID));
-
-    var difference_sum: usize = 0;
-    for (0..left_ids.items.len) |index| {
-        const smallest = @min(left_ids.items[index], right_ids.items[index]);
-        const largest = @max(left_ids.items[index], right_ids.items[index]);
-        difference_sum += @intCast(largest - smallest);
-    }
-
-    std.debug.print("total difference: {}\n", .{ difference_sum });
-
-    // PART2
-    var similarity_sum: usize = 0;
-    for (left_ids.items) |left_id| {
-        const right_ids_count = std.mem.count(LocationID, right_ids.items, &.{ left_id });
-        similarity_sum += @intCast(left_id * right_ids_count);
-    }
-
-    std.debug.print("total similarity: {}\n", .{ similarity_sum });
+    std.debug.assert(similarity == 22565391);
+    std.debug.print("total similarity: {}\n", .{ similarity });
 }

@@ -25,9 +25,9 @@ fn parse_line(data: []const u8) ![2]LocationId {
 }
 
 test "parse_line" {
-    const correct_line = "81510   22869";
+    const sample_line = "81510   22869";
     const correct_ids: [2]LocationId = .{ 81510, 22869 };
-    const parsed_ids = try parse_line(correct_line);
+    const parsed_ids = try parse_line(sample_line);
     try std.testing.expectEqual(correct_ids, parsed_ids);
 }
 
@@ -74,6 +74,23 @@ const Input = struct {
         self.right_ids.deinit(self.allocator);
     }
 };
+
+test "input" {
+    const sample_lines =
+        \\41226   69190
+        \\89318   10100
+    ;
+
+    var input: Input = .{};
+    const loaded_ids = try input.init(std.testing.allocator, sample_lines);
+    defer input.deinit();
+
+    try std.testing.expectEqual(loaded_ids, 2);
+    try std.testing.expectEqual(input.left_ids.items[0], 41226);
+    try std.testing.expectEqual(input.left_ids.items[1], 89318);
+    try std.testing.expectEqual(input.right_ids.items[0], 69190);
+    try std.testing.expectEqual(input.right_ids.items[1], 10100);
+}
 
 fn part1(allocator: std.mem.Allocator) !usize {
     // load input data

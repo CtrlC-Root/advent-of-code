@@ -3,6 +3,10 @@ const std = @import("std");
 const solution_2024_01 = @import("2024/01/main.zig");
 const solution_2024_02 = @import("2024/02/main.zig");
 
+test {
+    std.testing.refAllDecls(@This());
+}
+
 const Solution = struct {
     const Self = @This();
 

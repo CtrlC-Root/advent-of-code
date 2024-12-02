@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
     // XXX
     const binary = b.addExecutable(.{
         .name = "aoc",
-        .root_source_file = b.path("2024/01/main.zig"),
+        .root_source_file = b.path("2024/02/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -54,7 +54,7 @@ pub fn build(b: *std.Build) void {
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("2024/01/main.zig"),
+        .root_source_file = b.path("2024/02/main.zig"),
         .target = target,
         .optimize = optimize,
     });

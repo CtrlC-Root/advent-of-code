@@ -1,1 +1,1 @@
-.zig-cache,zig-out,env.fish,env.sh,input
+.zig-cache,zig-out,env.fish,env.sh,*/*/input

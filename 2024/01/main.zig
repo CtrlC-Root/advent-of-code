@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const input_data = @embedFile("./input");
 const LocationId = u32;
+const LocationIdArrayList = std.ArrayListUnmanaged(LocationId);
 
 fn parse_line(data: []const u8) ![2]LocationId {
     // retrieve exactly two non-space slices from the line data
@@ -33,7 +33,6 @@ test "parse_line" {
 
 const Input = struct {
     const Self = @This();
-    const LocationIdArrayList = std.ArrayListUnmanaged(LocationId);
 
     allocator: std.mem.Allocator = undefined,
     left_ids: LocationIdArrayList = undefined,
@@ -92,7 +91,7 @@ test "input" {
     try std.testing.expectEqual(input.right_ids.items[1], 10100);
 }
 
-fn part1(allocator: std.mem.Allocator) !usize {
+fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     // load input data
     var input: Input = .{};
     const loaded_ids = try input.init(allocator, input_data);
@@ -115,7 +114,7 @@ fn part1(allocator: std.mem.Allocator) !usize {
     return difference_sum;
 }
 
-fn part2(allocator: std.mem.Allocator) !usize {
+fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     // load input data
     var input: Input = .{};
     const loaded_ids = try input.init(allocator, input_data);
@@ -133,20 +132,15 @@ fn part2(allocator: std.mem.Allocator) !usize {
     return similarity_sum;
 }
 
-pub fn main() !void {
-    // create the general purpose allocator
-    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
-    const allocator = general_purpose_allocator.allocator();
-
+pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part1
-    const difference = try part1(allocator);
+    const difference = try part1(allocator, input_data);
 
     std.debug.assert(difference == 3574690);
     std.debug.print("total difference: {}\n", .{ difference });
 
     // part2
-    const similarity = try part2(allocator);
+    const similarity = try part2(allocator, input_data);
 
     std.debug.assert(similarity == 22565391);
     std.debug.print("total similarity: {}\n", .{ similarity });

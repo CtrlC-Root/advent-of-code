@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const input_data = @embedFile("input");
-
 const MultiplyOperands = struct {
     a: u32,
     b: u32,
@@ -116,7 +114,7 @@ test "parse_instruction" {
     try std.testing.expectEqual(result_dont.instruction, Instruction.dont);
 }
 
-fn part1(allocator: std.mem.Allocator) !usize {
+fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     _ = allocator;
 
     var index = std.mem.indexOf(u8, input_data, "mul(") orelse {
@@ -148,7 +146,7 @@ fn part1(allocator: std.mem.Allocator) !usize {
     return multiply_sum;
 }
 
-fn part2(allocator: std.mem.Allocator) !usize {
+fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     _ = allocator;
 
     var multiply_sum: usize = 0;
@@ -180,20 +178,15 @@ fn part2(allocator: std.mem.Allocator) !usize {
     return multiply_sum;
 }
 
-pub fn main() !void {
-    // create the general purpose allocator
-    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
-    const allocator = general_purpose_allocator.allocator();
-
+pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part 1
-    const result_all = try part1(allocator);
+    const result_all = try part1(allocator, input_data);
 
     std.debug.assert(result_all == 178794710);
     std.debug.print("result all: {d}\n", .{ result_all });
 
     // part 2
-    const result_conditional = try part2(allocator);
+    const result_conditional = try part2(allocator, input_data);
 
     std.debug.assert(result_conditional == 76729637);
     std.debug.print("result conditional: {d}\n", .{ result_conditional });

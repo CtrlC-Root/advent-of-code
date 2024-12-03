@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const input_data = @embedFile("./input");
-
 const Level = u32;
 const LevelArray = std.ArrayListUnmanaged(Level);
 const ReportArray = std.ArrayListUnmanaged(LevelArray);
@@ -78,7 +76,7 @@ fn part1_report_safe(levels: []const Level) bool {
     return true;
 }
 
-fn part1(allocator: std.mem.Allocator) !usize {
+fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     // load input data
     var input: Input = .{};
     const loaded_reports = try input.init(allocator, input_data);
@@ -120,7 +118,7 @@ fn part2_report_safe(levels: []const Level) bool {
     return false;
 }
 
-fn part2(allocator: std.mem.Allocator) !usize {
+fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     // load input data
     var input: Input = .{};
     const loaded_reports = try input.init(allocator, input_data);
@@ -139,20 +137,15 @@ fn part2(allocator: std.mem.Allocator) !usize {
     return safe_reports;
 }
 
-pub fn main() !void {
-    // create the general purpose allocator
-    var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
-    const allocator = general_purpose_allocator.allocator();
-
+pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part1
-    const safe_reports = try part1(allocator);
+    const safe_reports = try part1(allocator, input_data);
 
     std.debug.assert(safe_reports == 332);
     std.debug.print("safe reports: {}\n", .{ safe_reports });
 
     // part2
-    const safe_reports_with_damper = try part2(allocator);
+    const safe_reports_with_damper = try part2(allocator, input_data);
 
     std.debug.assert(safe_reports_with_damper == 398);
     std.debug.print("safe reports with damper: {}\n", .{ safe_reports_with_damper });

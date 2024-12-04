@@ -1,5 +1,10 @@
 const std = @import("std");
 
+const tidy = @cImport({
+    @cInclude("tidy.h");
+    @cInclude("tidybuffio.h");
+});
+
 const solution_2024_01 = @import("2024/01/main.zig");
 const solution_2024_02 = @import("2024/02/main.zig");
 const solution_2024_03 = @import("2024/03/main.zig");
@@ -47,7 +52,7 @@ fn fetch_input_data(
 
     const input_uri = try std.Uri.parse(input_uri_raw);
 
-    // determine the input data request cookie header value based on the api token
+    // determine the request cookie header value
     const input_cookie_buffer = input_uri_buffer[input_uri_raw.len..];
     const input_cookie_value = try std.fmt.bufPrint(
         input_cookie_buffer,
@@ -71,7 +76,7 @@ fn fetch_input_data(
 
     defer input_request.deinit();
 
-    // send input data request and wait for it to complete
+    // send request and wait for it to complete
     try input_request.send();
     try input_request.finish();
     try input_request.wait();

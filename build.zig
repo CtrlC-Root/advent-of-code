@@ -20,6 +20,14 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    // XXX: use pkg-config for this?
+    binary.linkLibC();
+    binary.addObjectFile(.{ .cwd_relative = "/usr/lib/libtidy.a" });
+
+    // XXX: dynamic linking
+    // binary.linkLibC();
+    // binary.linkSystemLibrary("tidy");
+
     b.installArtifact(binary);
 
     // Build step to run the solution runner.

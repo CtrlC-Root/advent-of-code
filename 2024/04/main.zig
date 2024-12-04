@@ -57,8 +57,9 @@ fn MatrixUnmanaged(comptime T: type) type {
 
 const ByteMatrixUnmanaged = MatrixUnmanaged(u8);
 
-const SEARCH_FORWARD = "XMAS";
-const SEARCH_BACKWARD = "SAMX";
+// PART 1 DATA
+const SEARCH_XMAS_FORWARD = "XMAS";
+const SEARCH_XMAS_BACKWARD = "SAMX";
 
 fn create_vertical_matrix(comptime data: []const u8) *const ByteMatrixUnmanaged {
     return &.{
@@ -68,8 +69,8 @@ fn create_vertical_matrix(comptime data: []const u8) *const ByteMatrixUnmanaged 
     };
 }
 
-const XMAS_VERTICAL_FORWARD = create_vertical_matrix(SEARCH_FORWARD);
-const XMAS_VERTICAL_BACKWARD = create_vertical_matrix(SEARCH_BACKWARD);
+const XMAS_VERTICAL_FORWARD = create_vertical_matrix(SEARCH_XMAS_FORWARD);
+const XMAS_VERTICAL_BACKWARD = create_vertical_matrix(SEARCH_XMAS_BACKWARD);
 
 fn create_horizontal_matrix(comptime data: []const u8) *const ByteMatrixUnmanaged {
     return &.{
@@ -79,8 +80,8 @@ fn create_horizontal_matrix(comptime data: []const u8) *const ByteMatrixUnmanage
     };
 }
 
-const XMAS_HORIZONTAL_FORWARD = create_horizontal_matrix(SEARCH_FORWARD);
-const XMAS_HORIZONTAL_BACKWARD = create_horizontal_matrix(SEARCH_BACKWARD);
+const XMAS_HORIZONTAL_FORWARD = create_horizontal_matrix(SEARCH_XMAS_FORWARD);
+const XMAS_HORIZONTAL_BACKWARD = create_horizontal_matrix(SEARCH_XMAS_BACKWARD);
 
 fn create_diagonal_down_data(
     comptime data: []const u8,
@@ -98,17 +99,17 @@ fn create_diagonal_down_data(
     return buffer;
 }
 
-const XMAS_DIAGONAL_DOWN_FORWARD_DATA = create_diagonal_down_data(SEARCH_FORWARD, 0);
+const XMAS_DIAGONAL_DOWN_FORWARD_DATA = create_diagonal_down_data(SEARCH_XMAS_FORWARD, 0);
 const XMAS_DIAGONAL_DOWN_FORWARD: *const ByteMatrixUnmanaged = &.{
-    .width = SEARCH_FORWARD.len,
-    .height = SEARCH_FORWARD.len,
+    .width = SEARCH_XMAS_FORWARD.len,
+    .height = SEARCH_XMAS_FORWARD.len,
     .data = @constCast(&XMAS_DIAGONAL_DOWN_FORWARD_DATA),
 };
 
-const XMAS_DIAGONAL_DOWN_BACKWARD_DATA = create_diagonal_down_data(SEARCH_BACKWARD, 0);
+const XMAS_DIAGONAL_DOWN_BACKWARD_DATA = create_diagonal_down_data(SEARCH_XMAS_BACKWARD, 0);
 const XMAS_DIAGONAL_DOWN_BACKWARD: *const ByteMatrixUnmanaged = &.{
-    .width = SEARCH_BACKWARD.len,
-    .height = SEARCH_BACKWARD.len,
+    .width = SEARCH_XMAS_BACKWARD.len,
+    .height = SEARCH_XMAS_BACKWARD.len,
     .data = @constCast(&XMAS_DIAGONAL_DOWN_BACKWARD_DATA),
 };
 
@@ -128,20 +129,85 @@ fn create_diagonal_up_data(
     return buffer;
 }
 
-const XMAS_DIAGONAL_UP_FORWARD_DATA = create_diagonal_down_data(SEARCH_FORWARD, 0);
+const XMAS_DIAGONAL_UP_FORWARD_DATA = create_diagonal_down_data(SEARCH_XMAS_FORWARD, 0);
 const XMAS_DIAGONAL_UP_FORWARD: *const ByteMatrixUnmanaged = &.{
-    .width = SEARCH_FORWARD.len,
-    .height = SEARCH_FORWARD.len,
+    .width = SEARCH_XMAS_FORWARD.len,
+    .height = SEARCH_XMAS_FORWARD.len,
     .data = @constCast(&XMAS_DIAGONAL_UP_FORWARD_DATA),
 };
 
-const XMAS_DIAGONAL_UP_BACKWARD_DATA = create_diagonal_down_data(SEARCH_BACKWARD, 0);
+const XMAS_DIAGONAL_UP_BACKWARD_DATA = create_diagonal_down_data(SEARCH_XMAS_BACKWARD, 0);
 const XMAS_DIAGONAL_UP_BACKWARD: *const ByteMatrixUnmanaged = &.{
-    .width = SEARCH_BACKWARD.len,
-    .height = SEARCH_BACKWARD.len,
+    .width = SEARCH_XMAS_BACKWARD.len,
+    .height = SEARCH_XMAS_BACKWARD.len,
     .data = @constCast(&XMAS_DIAGONAL_UP_BACKWARD_DATA),
 };
 
+// PART 2 DATA
+const SEARCH_MAS_FORWARD = "MAS";
+const SEARCH_MAS_BACKWARD = "SAM";
+
+fn create_cross_horizontal_data(
+    comptime data: []const u8,
+    comptime default: u8,
+) [data.len * data.len]u8 {
+    var buffer: [data.len * data.len]u8 = undefined;
+    for (0..data.len) |row| {
+        for (0..data.len) |column| {
+            const index = (row * data.len) + column;
+            const value: u8 = if (row == column or row == (data.len - column - 1)) data[column] else default;
+            buffer[index] = value;
+        }
+    }
+
+    return buffer;
+}
+
+const MAS_CROSS_HORIZONTAL_FORWARD_DATA = create_cross_horizontal_data(SEARCH_MAS_FORWARD, 0);
+const MAS_CROSS_HORIZONTAL_FORWARD: *const ByteMatrixUnmanaged = &.{
+    .width = SEARCH_MAS_FORWARD.len,
+    .height = SEARCH_MAS_FORWARD.len,
+    .data = @constCast(&MAS_CROSS_HORIZONTAL_FORWARD_DATA),
+};
+
+const MAS_CROSS_HORIZONTAL_BACKWARD_DATA = create_cross_horizontal_data(SEARCH_MAS_BACKWARD, 0);
+const MAS_CROSS_HORIZONTAL_BACKWARD: *const ByteMatrixUnmanaged = &.{
+    .width = SEARCH_MAS_BACKWARD.len,
+    .height = SEARCH_MAS_BACKWARD.len,
+    .data = @constCast(&MAS_CROSS_HORIZONTAL_BACKWARD_DATA),
+};
+
+fn create_cross_vertical_data(
+    comptime data: []const u8,
+    comptime default: u8,
+) [data.len * data.len]u8 {
+    var buffer: [data.len * data.len]u8 = undefined;
+    for (0..data.len) |row| {
+        for (0..data.len) |column| {
+            const index = (row * data.len) + column;
+            const value: u8 = if (row == column or row == (data.len - column - 1)) data[row] else default;
+            buffer[index] = value;
+        }
+    }
+
+    return buffer;
+}
+
+const MAS_CROSS_VERTICAL_FORWARD_DATA = create_cross_vertical_data(SEARCH_MAS_FORWARD, 0);
+const MAS_CROSS_VERTICAL_FORWARD: *const ByteMatrixUnmanaged = &.{
+    .width = SEARCH_MAS_FORWARD.len,
+    .height = SEARCH_MAS_FORWARD.len,
+    .data = @constCast(&MAS_CROSS_VERTICAL_FORWARD_DATA),
+};
+
+const MAS_CROSS_VERTICAL_BACKWARD_DATA = create_cross_vertical_data(SEARCH_MAS_BACKWARD, 0);
+const MAS_CROSS_VERTICAL_BACKWARD: *const ByteMatrixUnmanaged = &.{
+    .width = SEARCH_MAS_BACKWARD.len,
+    .height = SEARCH_MAS_BACKWARD.len,
+    .data = @constCast(&MAS_CROSS_VERTICAL_BACKWARD_DATA),
+};
+
+// IMPLEMENTATION
 fn parse_input(allocator: std.mem.Allocator, input_data: []const u8) !ByteMatrixUnmanaged {
     // XXX
     const index_first_newline = std.mem.indexOfScalar(u8, input_data, '\n') orelse {
@@ -219,7 +285,7 @@ fn count_overlap(
     return count;
 }
 
-test "second_example" {
+test "part1_example" {
     // parse input
     const sample_input =
         \\....XXMAS.
@@ -248,7 +314,7 @@ test "second_example" {
     const sample_matrix_last_row = sample_matrix.constRowSlice(sample_matrix.height - 1);
     try std.testing.expect(std.mem.eql(u8, sample_input_last_line, sample_matrix_last_row));
 
-    // count words
+    // counts
     const CountPair = struct {
         expected: usize,
         actual: usize,
@@ -274,6 +340,46 @@ test "second_example" {
     try std.testing.expectEqual(18, total_count);
 }
 
+test "part2_example" {
+    // parse input
+    const sample_input =
+        \\.M.S......
+        \\..A..MSMS.
+        \\.M.S.MAA..
+        \\..A.ASMSM.
+        \\.M.S.M....
+        \\..........
+        \\S.S.S.S.S.
+        \\.A.A.A.A..
+        \\M.M.M.M.M.
+        \\..........
+    ;
+
+    const sample_matrix = try parse_input(std.testing.allocator, sample_input);
+    defer sample_matrix.deinit(std.testing.allocator);
+
+    // counts
+    const CountPair = struct {
+        expected: usize,
+        actual: usize,
+    };
+
+    const counts: []const CountPair = &.{
+        .{ .expected = 1, .actual = count_overlap(&sample_matrix, MAS_CROSS_VERTICAL_FORWARD, 0) },
+        .{ .expected = 5, .actual = count_overlap(&sample_matrix, MAS_CROSS_VERTICAL_BACKWARD, 0) },
+        .{ .expected = 2, .actual = count_overlap(&sample_matrix, MAS_CROSS_HORIZONTAL_FORWARD, 0) },
+        .{ .expected = 1, .actual = count_overlap(&sample_matrix, MAS_CROSS_HORIZONTAL_BACKWARD, 0) },
+    };
+
+    var total_count: usize = 0;
+    for (counts) |count| {
+        try std.testing.expectEqual(count.expected, count.actual);
+        total_count += count.actual;
+    }
+
+    try std.testing.expectEqual(9, total_count);
+}
+
 fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     const search_matrix = try parse_input(allocator, input_data);
     defer search_matrix.deinit(allocator);
@@ -297,16 +403,35 @@ fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     return total_count;
 }
 
+fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
+    const search_matrix = try parse_input(allocator, input_data);
+    defer search_matrix.deinit(allocator);
+
+    const counts: []const usize = &.{
+        count_overlap(&search_matrix, MAS_CROSS_VERTICAL_FORWARD, 0),
+        count_overlap(&search_matrix, MAS_CROSS_VERTICAL_BACKWARD, 0),
+        count_overlap(&search_matrix, MAS_CROSS_HORIZONTAL_FORWARD, 0),
+        count_overlap(&search_matrix, MAS_CROSS_HORIZONTAL_BACKWARD, 0),
+    };
+
+    var total_count: usize = 0;
+    for (counts) |count| {
+        total_count += count;
+    }
+
+    return total_count;
+}
+
 pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part 1
-    const count = try part1(allocator, input_data);
+    const xmas_count = try part1(allocator, input_data);
 
-    std.debug.assert(count == 2718);
-    std.debug.print("count: {d}\n", .{ count });
+    std.debug.assert(xmas_count == 2718);
+    std.debug.print("XMAS count: {d}\n", .{ xmas_count });
 
-    // // part 2
-    // const result_conditional = try part2(allocator, input_data);
+    // part 2
+    const mas_count = try part2(allocator, input_data);
 
-    // std.debug.assert(result_conditional == 76729637);
-    // std.debug.print("result conditional: {d}\n", .{ result_conditional });
+    std.debug.assert(mas_count == 2046);
+    std.debug.print("MAS count: {d}\n", .{ mas_count });
 }

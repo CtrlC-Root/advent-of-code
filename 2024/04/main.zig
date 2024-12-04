@@ -1,5 +1,6 @@
 const std = @import("std");
 
+// COMMON DATA TYPES
 fn MatrixUnmanaged(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -207,9 +208,9 @@ const MAS_CROSS_VERTICAL_BACKWARD: *const ByteMatrixUnmanaged = &.{
     .data = @constCast(&MAS_CROSS_VERTICAL_BACKWARD_DATA),
 };
 
-// IMPLEMENTATION
+// COMMON ALGORITHMS
 fn parse_input(allocator: std.mem.Allocator, input_data: []const u8) !ByteMatrixUnmanaged {
-    // XXX
+    // look for newlines to determine matrix dimensions
     const index_first_newline = std.mem.indexOfScalar(u8, input_data, '\n') orelse {
         return error.InvalidFormat;
     };
@@ -219,74 +220,24 @@ fn parse_input(allocator: std.mem.Allocator, input_data: []const u8) !ByteMatrix
     std.debug.assert(index_first_newline > 0 and index_first_newline < 256);
     std.debug.assert(newlines > 0 and newlines < 256);
 
-    // XXX
+    // allocate and initialize matrix
     var matrix: ByteMatrixUnmanaged = .{};
     try matrix.init(allocator, index_first_newline, newlines + 1);
     errdefer matrix.deinit(allocator);
 
+    // copy input data into matrix data one line at a time
     var line_count: usize = 0;
     var line_iterator = std.mem.splitScalar(u8, input_data, '\n');
     while (line_iterator.next()) |line| {
-        const matrix_line = matrix.rowSlice(line_count);
-        std.mem.copyForwards(u8, matrix_line, line);
+        std.mem.copyForwards(u8, matrix.rowSlice(line_count), line);
         line_count += 1;
     }
 
-    // XXX
+    // return matrix with caller owned memory
     return matrix;
 }
 
-fn count_overlap(
-    haystack: *const ByteMatrixUnmanaged,
-    needle: *const ByteMatrixUnmanaged,
-    needle_mask: u8,
-) usize {
-    std.debug.assert(haystack.width > 0 and haystack.height > 0);
-    std.debug.assert(needle.width > 0 and needle.height > 0);
-    std.debug.assert(needle.width <= haystack.width);
-    std.debug.assert(needle.height <= haystack.height);
-
-    var count: usize = 0;
-    for (0..(haystack.height - needle.height + 1)) |row_offset| {
-        for (0..(haystack.width - needle.width + 1)) |column_offset| {
-            const matches: bool = check: {
-                for (0..needle.height) |row| {
-                    const haystack_row = haystack.constRowSlice(row_offset + row);
-                    const needle_row = needle.constRowSlice(row);
-
-                    for (0..needle.width) |column| {
-                        const haystack_value = &haystack_row[column_offset + column];
-                        const needle_value = &needle_row[column];
-
-                        //std.debug.print("H({d}, {d}) = {}\n", .{ row_offset + row, column_offset + column, haystack_value.* });
-                        //std.debug.print("N({d}, {d}) = {}\n", .{ row, column, needle_value.* });
-
-                        if (needle_value.* == needle_mask) {
-                            continue;
-                        }
-
-                        if (needle_value.* != haystack_value.*) {
-                            //std.debug.print("BREAK\n", .{});
-                            break :check false;
-                        }
-                    }
-                }
-
-                break :check true;
-            };
-
-            // std.debug.print("H({d}, {d}): {}\n", .{ row_offset, column_offset, matches });
-            if (matches) {
-                count += 1;
-            }
-        }
-    }
-
-    return count;
-}
-
-test "part1_example" {
-    // parse input
+test "parse_input" {
     const sample_input =
         \\....XXMAS.
         \\.SAMXMS...
@@ -313,8 +264,73 @@ test "part1_example" {
     const sample_input_last_line = sample_input[(sample_input.len - sample_matrix.width)..];
     const sample_matrix_last_row = sample_matrix.constRowSlice(sample_matrix.height - 1);
     try std.testing.expect(std.mem.eql(u8, sample_input_last_line, sample_matrix_last_row));
+}
 
-    // counts
+fn count_overlap(
+    haystack: *const ByteMatrixUnmanaged,
+    needle: *const ByteMatrixUnmanaged,
+    needle_mask: u8,
+) usize {
+    std.debug.assert(haystack.width > 0 and haystack.height > 0);
+    std.debug.assert(needle.width > 0 and needle.height > 0);
+    std.debug.assert(needle.width <= haystack.width);
+    std.debug.assert(needle.height <= haystack.height);
+
+    var count: usize = 0;
+
+    // sliding needle sized window over haystack
+    for (0..(haystack.height - needle.height + 1)) |row_offset| {
+        for (0..(haystack.width - needle.width + 1)) |column_offset| {
+            // check if needle matches haystack at window position
+            const matches: bool = check: {
+                for (0..needle.height) |row| {
+                    const haystack_row = haystack.constRowSlice(row_offset + row);
+                    const needle_row = needle.constRowSlice(row);
+
+                    for (0..needle.width) |column| {
+                        const haystack_value = &haystack_row[column_offset + column];
+                        const needle_value = &needle_row[column];
+
+                        // ignore needle mask values
+                        if (needle_value.* == needle_mask) {
+                            continue;
+                        }
+
+                        if (needle_value.* != haystack_value.*) {
+                            break :check false;
+                        }
+                    }
+                }
+
+                break :check true;
+            };
+
+            if (matches) {
+                count += 1;
+            }
+        }
+    }
+
+    return count;
+}
+
+test "part1_example" {
+    const sample_input =
+        \\....XXMAS.
+        \\.SAMXMS...
+        \\...S..A...
+        \\..A.A.MS.X
+        \\XMASAMX.MM
+        \\X.....XA.A
+        \\S.S.S.S.SS
+        \\.A.A.A.A.A
+        \\..M.M.M.MM
+        \\.X.X.XMASX
+    ;
+
+    const sample_matrix = try parse_input(std.testing.allocator, sample_input);
+    defer sample_matrix.deinit(std.testing.allocator);
+
     const CountPair = struct {
         expected: usize,
         actual: usize,
@@ -341,7 +357,6 @@ test "part1_example" {
 }
 
 test "part2_example" {
-    // parse input
     const sample_input =
         \\.M.S......
         \\..A..MSMS.
@@ -358,7 +373,6 @@ test "part2_example" {
     const sample_matrix = try parse_input(std.testing.allocator, sample_input);
     defer sample_matrix.deinit(std.testing.allocator);
 
-    // counts
     const CountPair = struct {
         expected: usize,
         actual: usize,
@@ -380,6 +394,7 @@ test "part2_example" {
     try std.testing.expectEqual(9, total_count);
 }
 
+// IMPLEMENTATION
 fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     const search_matrix = try parse_input(allocator, input_data);
     defer search_matrix.deinit(allocator);

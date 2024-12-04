@@ -171,7 +171,7 @@ fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
             },
             .dont => {
                 multiply_enabled = false;
-            }
+            },
         }
     }
 
@@ -183,11 +183,11 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     const result_all = try part1(allocator, input_data);
 
     std.debug.assert(result_all == 178794710);
-    std.debug.print("result all: {d}\n", .{ result_all });
+    std.debug.print("result all: {d}\n", .{result_all});
 
     // part 2
     const result_conditional = try part2(allocator, input_data);
 
     std.debug.assert(result_conditional == 76729637);
-    std.debug.print("result conditional: {d}\n", .{ result_conditional });
+    std.debug.print("result conditional: {d}\n", .{result_conditional});
 }

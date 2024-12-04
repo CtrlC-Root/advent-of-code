@@ -142,11 +142,11 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     const safe_reports = try part1(allocator, input_data);
 
     std.debug.assert(safe_reports == 332);
-    std.debug.print("safe reports: {}\n", .{ safe_reports });
+    std.debug.print("safe reports: {}\n", .{safe_reports});
 
     // part2
     const safe_reports_with_damper = try part2(allocator, input_data);
 
     std.debug.assert(safe_reports_with_damper == 398);
-    std.debug.print("safe reports with damper: {}\n", .{ safe_reports_with_damper });
+    std.debug.print("safe reports with damper: {}\n", .{safe_reports_with_damper});
 }

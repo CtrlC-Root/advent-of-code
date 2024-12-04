@@ -427,11 +427,11 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     const xmas_count = try part1(allocator, input_data);
 
     std.debug.assert(xmas_count == 2718);
-    std.debug.print("XMAS count: {d}\n", .{ xmas_count });
+    std.debug.print("XMAS count: {d}\n", .{xmas_count});
 
     // part 2
     const mas_count = try part2(allocator, input_data);
 
     std.debug.assert(mas_count == 2046);
-    std.debug.print("MAS count: {d}\n", .{ mas_count });
+    std.debug.print("MAS count: {d}\n", .{mas_count});
 }

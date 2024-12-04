@@ -125,7 +125,7 @@ fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     // calculate total similarity between the two lists
     var similarity_sum: usize = 0;
     for (input.left_ids.items) |left_id| {
-        const right_ids_count = std.mem.count(LocationId, input.right_ids.items, &.{ left_id });
+        const right_ids_count = std.mem.count(LocationId, input.right_ids.items, &.{left_id});
         similarity_sum += @intCast(left_id * right_ids_count);
     }
 
@@ -137,11 +137,11 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     const difference = try part1(allocator, input_data);
 
     std.debug.assert(difference == 3574690);
-    std.debug.print("total difference: {}\n", .{ difference });
+    std.debug.print("total difference: {}\n", .{difference});
 
     // part2
     const similarity = try part2(allocator, input_data);
 
     std.debug.assert(similarity == 22565391);
-    std.debug.print("total similarity: {}\n", .{ similarity });
+    std.debug.print("total similarity: {}\n", .{similarity});
 }

@@ -9,6 +9,7 @@ const solution_2024_01 = @import("2024/01/main.zig");
 const solution_2024_02 = @import("2024/02/main.zig");
 const solution_2024_03 = @import("2024/03/main.zig");
 const solution_2024_04 = @import("2024/04/main.zig");
+const solution_2024_05 = @import("2024/05/main.zig");
 
 test {
     std.testing.refAllDecls(@This());
@@ -27,6 +28,7 @@ const solutions = std.StaticStringMap(Solution).initComptime(&.{
     .{ "2024-02", .{ .year = 2024, .day = 2, .run = &solution_2024_02.run } },
     .{ "2024-03", .{ .year = 2024, .day = 3, .run = &solution_2024_03.run } },
     .{ "2024-04", .{ .year = 2024, .day = 4, .run = &solution_2024_04.run } },
+    .{ "2024-05", .{ .year = 2024, .day = 5, .run = &solution_2024_05.run } },
 });
 
 fn fetch_input_data(

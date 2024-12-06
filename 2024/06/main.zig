@@ -104,25 +104,26 @@ const Input = struct {
 
     pub fn init(self: *Self, allocator: std.mem.Allocator, input_data: []const u8) !void {
         // look for newlines to determine map dimensions
-        const index_first_newline = std.mem.indexOfScalar(u8, input_data, '\n') orelse {
+        const trimmed_input = std.mem.trim(u8, input_data, &.{ '\n' });
+        const index_first_newline = std.mem.indexOfScalar(u8, trimmed_input, '\n') orelse {
             return error.InvalidFormat;
         };
 
-        const newlines = std.mem.count(u8, input_data, &.{'\n'});
+        const newlines = std.mem.count(u8, trimmed_input, &.{'\n'});
 
         std.debug.assert(index_first_newline > 0 and index_first_newline < 256);
         std.debug.assert(newlines > 0 and newlines < 256);
 
         // allocate and initialize map
         var map: MapUnmanaged = .{};
-        try map.init(allocator, index_first_newline, newlines);
+        try map.init(allocator, index_first_newline, newlines + 1);
         errdefer map.deinit(allocator);
 
         // fill in map data one line at a time and keep track of the initial
         // guard position if we find it
         var row: usize = 0;
         var guard: ?Guard = null;
-        var line_iterator = std.mem.splitScalar(u8, input_data, '\n');
+        var line_iterator = std.mem.splitScalar(u8, trimmed_input, '\n');
 
         while (line_iterator.next()) |line| {
             for (0..line.len) |column| {
@@ -133,6 +134,8 @@ const Input = struct {
                         .position = .{ .row = @intCast(row), .column = @intCast(column) },
                         .direction = direction,
                     };
+
+                    map.set(row, column, .none);
                 } else |_| {
                     const tile = std.meta.intToEnum(Tile, value) catch {
                         return error.InvalidFormat;

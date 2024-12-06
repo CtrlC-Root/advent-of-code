@@ -115,7 +115,7 @@ const Input = struct {
 
         // allocate and initialize map
         var map: MapUnmanaged = .{};
-        try map.init(allocator, index_first_newline, newlines + 1);
+        try map.init(allocator, index_first_newline, newlines);
         errdefer map.deinit(allocator);
 
         // fill in map data one line at a time and keep track of the initial
@@ -305,6 +305,9 @@ fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     var input: Input = .{};
     try input.init(allocator, input_data);
     defer input.deinit();
+
+    try std.testing.expectEqual(130, input.map.height);
+    try std.testing.expectEqual(130, input.map.width);
 
     const simulated_guard = try simulate_guard(allocator, &input);
     defer simulated_guard.deinit(allocator);

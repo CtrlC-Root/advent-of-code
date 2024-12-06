@@ -211,11 +211,12 @@ const MAS_CROSS_VERTICAL_BACKWARD: *const ByteMatrixUnmanaged = &.{
 // COMMON ALGORITHMS
 fn parse_input(allocator: std.mem.Allocator, input_data: []const u8) !ByteMatrixUnmanaged {
     // look for newlines to determine matrix dimensions
-    const index_first_newline = std.mem.indexOfScalar(u8, input_data, '\n') orelse {
+    const trimmed_input = std.mem.trim(u8, input_data, &.{ '\n' });
+    const index_first_newline = std.mem.indexOfScalar(u8, trimmed_input, '\n') orelse {
         return error.InvalidFormat;
     };
 
-    const newlines = std.mem.count(u8, input_data, &.{'\n'});
+    const newlines = std.mem.count(u8, trimmed_input, &.{'\n'});
 
     std.debug.assert(index_first_newline > 0 and index_first_newline < 256);
     std.debug.assert(newlines > 0 and newlines < 256);
@@ -227,7 +228,7 @@ fn parse_input(allocator: std.mem.Allocator, input_data: []const u8) !ByteMatrix
 
     // copy input data into matrix data one line at a time
     var line_count: usize = 0;
-    var line_iterator = std.mem.splitScalar(u8, input_data, '\n');
+    var line_iterator = std.mem.splitScalar(u8, trimmed_input, '\n');
     while (line_iterator.next()) |line| {
         std.mem.copyForwards(u8, matrix.rowSlice(line_count), line);
         line_count += 1;

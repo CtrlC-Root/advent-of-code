@@ -164,7 +164,12 @@ test "parse_input" {
     try std.testing.expect(antenna_positions.items[2].equals(Vec2d{ .x = 5, .y = 5 }));
 }
 
-fn calculate_antinodes(allocator: std.mem.Allocator, map: *const Map2d, antenna: AntennaId) ![]const Vec2d {
+fn calculate_antinodes(
+    allocator: std.mem.Allocator,
+    map: *const Map2d,
+    antenna: AntennaId,
+    repeating: bool,
+) ![]const Vec2d {
     const antenna_locations = map.antennas.get(antenna) orelse {
         return error.InvalidAntennaId;
     };
@@ -172,20 +177,38 @@ fn calculate_antinodes(allocator: std.mem.Allocator, map: *const Map2d, antenna:
     var antinodes = std.AutoHashMap(Vec2d, bool).init(allocator);
     defer antinodes.deinit();
 
+    var position: Vec2d = undefined;
     for (0..antenna_locations.items.len) |index_a| {
         for ((index_a + 1)..antenna_locations.items.len) |index_b| {
             const location_a = antenna_locations.items[index_a];
             const location_b = antenna_locations.items[index_b];
             const delta = location_b.subtract(location_a);
 
-            const lower_position = location_a.subtract(delta);
-            if (map.containsPosition(lower_position)) {
-                try antinodes.put(lower_position, true);
+            if (repeating) {
+                try antinodes.put(location_a, true);
+                try antinodes.put(location_b, true);
             }
 
-            const upper_position = location_b.add(delta);
-            if (map.containsPosition(upper_position)) {
-                try antinodes.put(upper_position, true);
+            position = location_a.subtract(delta);
+            while (map.containsPosition(position)) {
+                try antinodes.put(position, true);
+
+                if (!repeating) {
+                    break;
+                }
+
+                position = position.subtract(delta);
+            }
+
+            position = location_b.add(delta);
+            while (map.containsPosition(position)) {
+                try antinodes.put(position, true);
+
+                if (!repeating) {
+                    break;
+                }
+
+                position = position.add(delta);
             }
         }
     }
@@ -202,7 +225,7 @@ fn calculate_antinodes(allocator: std.mem.Allocator, map: *const Map2d, antenna:
 }
 
 test "calculate_antinodes" {
-    // simple example
+    // simple example (part1)
     const simple_input_data =
         \\..........
         \\...#......
@@ -220,7 +243,7 @@ test "calculate_antinodes" {
     try simple_input.init(std.testing.allocator, simple_input_data);
     defer simple_input.deinit();
 
-    const simple_antinode_positions = try calculate_antinodes(std.testing.allocator, &simple_input.map, 'a');
+    const simple_antinode_positions = try calculate_antinodes(std.testing.allocator, &simple_input.map, 'a', false);
     defer std.testing.allocator.free(simple_antinode_positions);
 
     try std.testing.expectEqual(4, simple_antinode_positions.len);
@@ -229,7 +252,7 @@ test "calculate_antinodes" {
     try std.testing.expect(simple_antinode_positions[2].equals(Vec2d{ .x = 0, .y = 2 }));
     try std.testing.expect(simple_antinode_positions[3].equals(Vec2d{ .x = 2, .y = 6 }));
 
-    // complex example
+    // complex example (part1)
     const complex_input_data =
         \\......#....#
         \\...#....0...
@@ -249,19 +272,42 @@ test "calculate_antinodes" {
     try complex_input.init(std.testing.allocator, complex_input_data);
     defer complex_input.deinit();
 
-    const complex_antinode_positions = try calculate_antinodes(std.testing.allocator, &complex_input.map, '0');
+    const complex_antinode_positions = try calculate_antinodes(std.testing.allocator, &complex_input.map, '0', false);
     defer std.testing.allocator.free(complex_antinode_positions);
 
     try std.testing.expectEqual(10, complex_antinode_positions.len);
+
+    // repeating example (part2)
+    const repeating_input_data =
+        \\T....#....
+        \\...T......
+        \\.T....#...
+        \\.........#
+        \\..#.......
+        \\..........
+        \\...#......
+        \\..........
+        \\....#.....
+        \\..........
+    ;
+
+    var repeating_input: Input = .{};
+    try repeating_input.init(std.testing.allocator, repeating_input_data);
+    defer repeating_input.deinit();
+
+    const repeating_antinode_positions = try calculate_antinodes(std.testing.allocator, &repeating_input.map, 'T', true);
+    defer std.testing.allocator.free(repeating_antinode_positions);
+
+    try std.testing.expectEqual(9, repeating_antinode_positions.len);
 }
 
-fn calculate_unique_antinodes(allocator: std.mem.Allocator, map: *const Map2d) !usize {
+fn calculate_unique_antinodes(allocator: std.mem.Allocator, map: *const Map2d, repeating: bool) !usize {
     var positions = std.AutoHashMap(Vec2d, bool).init(allocator);
     defer positions.deinit();
 
     var antenna_id_iterator = map.antennas.keyIterator();
     while (antenna_id_iterator.next()) |antenna_id| {
-        const antinode_positions = try calculate_antinodes(allocator, map, antenna_id.*);
+        const antinode_positions = try calculate_antinodes(allocator, map, antenna_id.*, repeating);
         defer allocator.free(antinode_positions);
 
         for (antinode_positions) |position| {
@@ -273,7 +319,7 @@ fn calculate_unique_antinodes(allocator: std.mem.Allocator, map: *const Map2d) !
 }
 
 test "calculate_unique_antinodes" {
-    // simple example
+    // simple example (part1)
     const simple_input_data =
         \\..........
         \\...#......
@@ -291,10 +337,10 @@ test "calculate_unique_antinodes" {
     try simple_input.init(std.testing.allocator, simple_input_data);
     defer simple_input.deinit();
 
-    const simple_unique_antinodes = try calculate_unique_antinodes(std.testing.allocator, &simple_input.map);
+    const simple_unique_antinodes = try calculate_unique_antinodes(std.testing.allocator, &simple_input.map, false);
     try std.testing.expectEqual(4, simple_unique_antinodes);
 
-    // complex example
+    // complex example (part1)
     const complex_input_data =
         \\......#....#
         \\...#....0...
@@ -314,8 +360,31 @@ test "calculate_unique_antinodes" {
     try complex_input.init(std.testing.allocator, complex_input_data);
     defer complex_input.deinit();
 
-    const complex_unique_antinodes = try calculate_unique_antinodes(std.testing.allocator, &complex_input.map);
+    const complex_unique_antinodes = try calculate_unique_antinodes(std.testing.allocator, &complex_input.map, false);
     try std.testing.expectEqual(14, complex_unique_antinodes);
+
+    // repeating example (part2)
+    const repeating_input_data =
+        \\##....#....#
+        \\.#.#....0...
+        \\..#.#0....#.
+        \\..##...0....
+        \\....0....#..
+        \\.#...#A....#
+        \\...#..#.....
+        \\#....#.#....
+        \\..#.....A...
+        \\....#....A..
+        \\.#........#.
+        \\...#......##
+    ;
+
+    var repeating_input: Input = .{};
+    try repeating_input.init(std.testing.allocator, repeating_input_data);
+    defer repeating_input.deinit();
+
+    const repeating_unique_antinodes = try calculate_unique_antinodes(std.testing.allocator, &repeating_input.map, true);
+    try std.testing.expectEqual(34, repeating_unique_antinodes);
 }
 
 fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
@@ -323,19 +392,27 @@ fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     try input.init(allocator, input_data);
     defer input.deinit();
 
-    return try calculate_unique_antinodes(allocator, &input.map);
+    return try calculate_unique_antinodes(allocator, &input.map, false);
+}
+
+fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
+    var input: Input = .{};
+    try input.init(allocator, input_data);
+    defer input.deinit();
+
+    return try calculate_unique_antinodes(allocator, &input.map, true);
 }
 
 pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part 1
     const unique_antinodes = try part1(allocator, input_data);
 
-    // try std.testing.expectEqual(0, unique_antinodes);
+    try std.testing.expectEqual(305, unique_antinodes);
     std.debug.print("unique antinodes: {d}\n", .{unique_antinodes});
 
-    // // part 2
-    // const checksum_files = try part2(allocator, input_data);
+    // part 2
+    const unique_repeating = try part2(allocator, input_data);
 
-    // try std.testing.expectEqual(6460170593016, checksum_files);
-    // std.debug.print("checksum files: {d}\n", .{checksum_files});
+    try std.testing.expectEqual(1150, unique_repeating);
+    std.debug.print("unique repeating: {d}\n", .{unique_repeating});
 }

@@ -60,7 +60,9 @@ const DiskMapUnmanaged = struct {
         var total_blocks: usize = 0;
         for (self.blocks) |block| {
             switch (block) {
-                .empty => { total_blocks += 1; },
+                .empty => {
+                    total_blocks += 1;
+                },
                 else => {},
             }
         }
@@ -188,7 +190,7 @@ test "defragment_blocks" {
 }
 
 fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
-    const layout = std.mem.trim(u8, input_data, &.{ '\n' });
+    const layout = std.mem.trim(u8, input_data, &.{'\n'});
     var disk_map = try DiskMapUnmanaged.init(allocator, layout);
     defer disk_map.deinit(allocator);
 
@@ -279,7 +281,7 @@ fn defragment_files(allocator: std.mem.Allocator, disk_map: *DiskMapUnmanaged) !
                 },
                 .empty => {
                     target_extent.size += 1;
-                }
+                },
             }
 
             if (target_extent.size >= file_extent.*.size) {
@@ -326,7 +328,7 @@ test "defragment_files" {
 }
 
 fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
-    const layout = std.mem.trim(u8, input_data, &.{ '\n' });
+    const layout = std.mem.trim(u8, input_data, &.{'\n'});
     var disk_map = try DiskMapUnmanaged.init(allocator, layout);
     defer disk_map.deinit(allocator);
 

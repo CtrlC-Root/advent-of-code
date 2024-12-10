@@ -211,7 +211,7 @@ const MAS_CROSS_VERTICAL_BACKWARD: *const ByteMatrixUnmanaged = &.{
 // COMMON ALGORITHMS
 fn parse_input(allocator: std.mem.Allocator, input_data: []const u8) !ByteMatrixUnmanaged {
     // look for newlines to determine matrix dimensions
-    const trimmed_input = std.mem.trim(u8, input_data, &.{ '\n' });
+    const trimmed_input = std.mem.trim(u8, input_data, &.{'\n'});
     const index_first_newline = std.mem.indexOfScalar(u8, trimmed_input, '\n') orelse {
         return error.InvalidFormat;
     };

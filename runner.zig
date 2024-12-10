@@ -12,6 +12,7 @@ const solution_2024_04 = @import("2024/04/main.zig");
 const solution_2024_05 = @import("2024/05/main.zig");
 const solution_2024_06 = @import("2024/06/main.zig");
 const solution_2024_07 = @import("2024/07/main.zig");
+const solution_2024_08 = @import("2024/08/main.zig");
 const solution_2024_09 = @import("2024/09/main.zig");
 
 test {
@@ -34,6 +35,7 @@ const solutions = std.StaticStringMap(Solution).initComptime(&.{
     .{ "2024-05", .{ .year = 2024, .day = 5, .run = &solution_2024_05.run } },
     .{ "2024-06", .{ .year = 2024, .day = 6, .run = &solution_2024_06.run } },
     .{ "2024-07", .{ .year = 2024, .day = 7, .run = &solution_2024_07.run } },
+    .{ "2024-08", .{ .year = 2024, .day = 8, .run = &solution_2024_08.run } },
     .{ "2024-09", .{ .year = 2024, .day = 9, .run = &solution_2024_09.run } },
 });
 

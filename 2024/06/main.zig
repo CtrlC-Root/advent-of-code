@@ -46,7 +46,7 @@ const Guard = struct {
     direction: Direction,
 };
 
-const MapUnmanaged = struct {
+const TileMapUnmanaged = struct {
     const Self = @This();
 
     width: usize = undefined,
@@ -99,7 +99,7 @@ const Input = struct {
     const Self = @This();
 
     allocator: std.mem.Allocator = undefined,
-    map: MapUnmanaged = undefined,
+    map: TileMapUnmanaged = undefined,
     guard: Guard = undefined,
 
     pub fn init(self: *Self, allocator: std.mem.Allocator, input_data: []const u8) !void {
@@ -115,7 +115,7 @@ const Input = struct {
         std.debug.assert(newlines > 0 and newlines < 256);
 
         // allocate and initialize map
-        var map: MapUnmanaged = .{};
+        var map: TileMapUnmanaged = .{};
         try map.init(allocator, index_first_newline, newlines + 1);
         errdefer map.deinit(allocator);
 
@@ -128,7 +128,13 @@ const Input = struct {
         while (line_iterator.next()) |line| {
             for (0..line.len) |column| {
                 const value = line[column];
-                if (std.meta.intToEnum(Direction, value)) |direction| {
+                const sanitized_value = switch (value) {
+                    '-', '|', '+' => '.',
+                    'O' => '#',
+                    else => value,
+                };
+
+                if (std.meta.intToEnum(Direction, sanitized_value)) |direction| {
                     std.debug.assert(guard == null);
                     guard = .{
                         .position = .{ .row = @intCast(row), .column = @intCast(column) },
@@ -137,7 +143,7 @@ const Input = struct {
 
                     map.set(row, column, .none);
                 } else |_| {
-                    const tile = std.meta.intToEnum(Tile, value) catch {
+                    const tile = std.meta.intToEnum(Tile, sanitized_value) catch {
                         return error.InvalidFormat;
                     };
 
@@ -189,25 +195,52 @@ test "input_parse" {
 }
 
 // COMMON ALGORITHMS
-const SimulatedGuard = struct {
+const SimulationResults = struct {
     const Self = @This();
 
-    positions: []Position,
+    const Record = union(enum) {
+        visit: Guard,
+        turn: Direction,
+    };
+
+    const Termination = enum(u8) {
+        guard_left_map,
+        guard_entered_loop,
+    };
+
+    records: []Record,
+    unique_positions: usize,
+    termination: Self.Termination,
 
     pub fn deinit(self: Self, allocator: std.mem.Allocator) void {
-        allocator.free(self.positions);
+        allocator.free(self.records);
     }
 };
 
-fn simulate_guard(allocator: std.mem.Allocator, input: *const Input) !SimulatedGuard {
-    var positions = std.ArrayList(Position).init(allocator);
-    defer positions.deinit();
+fn simulate(allocator: std.mem.Allocator, input: *const Input) !SimulationResults {
+    var records = std.ArrayList(SimulationResults.Record).init(allocator);
+    defer records.deinit();
+
+    var last_seen = std.AutoHashMap(Position, Direction).init(allocator);
+    defer last_seen.deinit();
 
     // simulate the guard and track the path it follows
     var guard = input.guard;
+    var loop_detected = false;
+
     while (input.map.containsPosition(guard.position)) {
+        // detect whether the guard is about to enter a loop by visiting
+        // a position from earlier while facing the same way
+        if (last_seen.get(guard.position)) |last_seen_direction| {
+            if (guard.direction == last_seen_direction) {
+                loop_detected = true;
+                break;
+            }
+        }
+
         // track visited positions
-        try positions.append(guard.position);
+        try records.append(SimulationResults.Record{ .visit = guard });
+        try last_seen.put(guard.position, guard.direction);
 
         // turn the guard clockwise until it's not facing an obstable
         turn: for (0..std.meta.fields(Direction).len) |_| {
@@ -220,6 +253,7 @@ fn simulate_guard(allocator: std.mem.Allocator, input: *const Input) !SimulatedG
                 .none => break :turn,
                 .obstacle => {
                     guard.direction = guard.direction.turnRight();
+                    try records.append(SimulationResults.Record{ .turn = guard.direction });
                 },
             }
         } else {
@@ -234,45 +268,10 @@ fn simulate_guard(allocator: std.mem.Allocator, input: *const Input) !SimulatedG
 
     // return the simulation results with caller owned memory
     return .{
-        .positions = try positions.toOwnedSlice(),
+        .records = try records.toOwnedSlice(),
+        .unique_positions = last_seen.count(),
+        .termination = if (loop_detected) .guard_entered_loop else .guard_left_map,
     };
-}
-
-fn count_unique_positions(allocator: std.mem.Allocator, positions: []const Position) !usize {
-    var seen = std.AutoHashMap(Position, bool).init(allocator);
-    defer seen.deinit();
-
-    for (positions) |position| {
-        try seen.put(position, true);
-    }
-
-    return seen.count();
-}
-
-fn debug_print_results(input: *const Input, simulated_guard: *const SimulatedGuard) void {
-    std.debug.print("\n", .{});
-
-    for (0..input.map.height) |row| {
-        for (0..input.map.width) |column| {
-            const position: Position = .{ .row = @intCast(row), .column = @intCast(column) };
-            for (simulated_guard.positions) |visited_position| {
-                if (position.row == visited_position.row and position.column == visited_position.column) {
-                    std.debug.print("X", .{});
-                    break;
-                }
-            } else {
-                const tile = input.map.getPosition(position) orelse unreachable;
-                switch (tile) {
-                    .none => std.debug.print(".", .{}),
-                    .obstacle => std.debug.print("#", .{}),
-                }
-            }
-        }
-
-        std.debug.print("\n", .{});
-    }
-
-    std.debug.print("\n", .{});
 }
 
 test "part1_example" {
@@ -293,14 +292,117 @@ test "part1_example" {
     try input.init(std.testing.allocator, sample_input);
     defer input.deinit();
 
-    const simulated_guard = try simulate_guard(std.testing.allocator, &input);
-    defer simulated_guard.deinit(std.testing.allocator);
+    const results = try simulate(std.testing.allocator, &input);
+    defer results.deinit(std.testing.allocator);
 
-    const unique_positions = try count_unique_positions(std.testing.allocator, simulated_guard.positions);
-    try std.testing.expectEqual(41, unique_positions);
+    try std.testing.expectEqual(.guard_left_map, results.termination);
+    try std.testing.expectEqual(41, results.unique_positions);
+}
 
-    // XXX debugging
-    debug_print_results(&input, &simulated_guard);
+test "part2_example" {
+    const loop_option_one =
+        \\....#.....
+        \\....+---+#
+        \\....|...|.
+        \\..#.|...|.
+        \\....|..#|.
+        \\....|...|.
+        \\.#.O^---+.
+        \\........#.
+        \\#.........
+        \\......#...
+    ;
+
+    const loop_option_two =
+        \\....#.....
+        \\....+---+#
+        \\....|...|.
+        \\..#.|...|.
+        \\..+-+-+#|.
+        \\..|.|.|.|.
+        \\.#+-^-+-+.
+        \\......O.#.
+        \\#.........
+        \\......#...
+    ;
+
+    const loop_option_three =
+        \\....#.....
+        \\....+---+#
+        \\....|...|.
+        \\..#.|...|.
+        \\..+-+-+#|.
+        \\..|.|.|.|.
+        \\.#+-^-+-+.
+        \\.+----+O#.
+        \\#+----+...
+        \\......#...
+    ;
+
+    const loop_option_four =
+        \\....#.....
+        \\....+---+#
+        \\....|...|.
+        \\..#.|...|.
+        \\..+-+-+#|.
+        \\..|.|.|.|.
+        \\.#+-^-+-+.
+        \\..|...|.#.
+        \\#O+---+...
+        \\......#...
+    ;
+
+    const loop_option_five =
+        \\....#.....
+        \\....+---+#
+        \\....|...|.
+        \\..#.|...|.
+        \\..+-+-+#|.
+        \\..|.|.|.|.
+        \\.#+-^-+-+.
+        \\....|.|.#.
+        \\#..O+-+...
+        \\......#...
+    ;
+
+    const loop_option_six =
+        \\....#.....
+        \\....+---+#
+        \\....|...|.
+        \\..#.|...|.
+        \\..+-+-+#|.
+        \\..|.|.|.|.
+        \\.#+-^-+-+.
+        \\.+----++#.
+        \\#+----++..
+        \\......#O..
+    ;
+
+    // simulations
+    const TestCaseData = struct {
+        input_data: []const u8,
+    };
+
+    const simulations: []const TestCaseData = &.{
+        .{ .input_data = loop_option_one },
+        .{ .input_data = loop_option_two },
+        .{ .input_data = loop_option_three },
+        .{ .input_data = loop_option_four },
+        .{ .input_data = loop_option_five },
+        .{ .input_data = loop_option_six },
+    };
+
+    // confirm the loop is detected for each example simulation
+    for (simulations) |simulation| {
+        var input: Input = .{};
+        try input.init(std.testing.allocator, simulation.input_data);
+        defer input.deinit();
+
+        const results = try simulate(std.testing.allocator, &input);
+        defer results.deinit(std.testing.allocator);
+
+        try std.testing.expectEqual(.guard_entered_loop, results.termination);
+    }
 }
 
 // IMPLEMENTATION
@@ -312,10 +414,11 @@ fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     try std.testing.expectEqual(130, input.map.height);
     try std.testing.expectEqual(130, input.map.width);
 
-    const simulated_guard = try simulate_guard(allocator, &input);
-    defer simulated_guard.deinit(allocator);
+    const results = try simulate(allocator, &input);
+    defer results.deinit(allocator);
 
-    return try count_unique_positions(allocator, simulated_guard.positions);
+    try std.testing.expectEqual(.guard_left_map, results.termination);
+    return results.unique_positions;
 }
 
 pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {

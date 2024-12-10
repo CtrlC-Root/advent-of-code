@@ -70,6 +70,13 @@ const TileMapUnmanaged = struct {
         allocator.free(self.tiles);
     }
 
+    pub fn dupe(self: *Self, allocator: std.mem.Allocator, other: *const Self) !void {
+        try self.init(allocator, other.width, other.height);
+        errdefer self.deinit();
+
+        std.mem.copyForwards(Tile, self.tiles, other.tiles);
+    }
+
     pub fn get(self: Self, row: usize, column: usize) Tile {
         std.debug.assert(row < self.height);
         std.debug.assert(column < self.width);
@@ -93,6 +100,11 @@ const TileMapUnmanaged = struct {
     pub fn getPosition(self: Self, position: Position) ?Tile {
         return if (self.containsPosition(position)) self.get(@intCast(position.row), @intCast(position.column)) else null;
     }
+
+    pub fn setPosition(self: *Self, position: Position, value: Tile) void {
+        std.debug.assert(self.containsPosition(position));
+        self.set(@intCast(position.row), @intCast(position.column), value);
+    }
 };
 
 const Input = struct {
@@ -104,7 +116,7 @@ const Input = struct {
 
     pub fn init(self: *Self, allocator: std.mem.Allocator, input_data: []const u8) !void {
         // look for newlines to determine map dimensions
-        const trimmed_input = std.mem.trim(u8, input_data, &.{ '\n' });
+        const trimmed_input = std.mem.trim(u8, input_data, &.{'\n'});
         const index_first_newline = std.mem.indexOfScalar(u8, trimmed_input, '\n') orelse {
             return error.InvalidFormat;
         };
@@ -217,7 +229,11 @@ const SimulationResults = struct {
     }
 };
 
-fn simulate(allocator: std.mem.Allocator, input: *const Input) !SimulationResults {
+fn simulate(
+    allocator: std.mem.Allocator,
+    map: *const TileMapUnmanaged,
+    initial_guard: *const Guard,
+) !SimulationResults {
     var records = std.ArrayList(SimulationResults.Record).init(allocator);
     defer records.deinit();
 
@@ -225,10 +241,10 @@ fn simulate(allocator: std.mem.Allocator, input: *const Input) !SimulationResult
     defer last_seen.deinit();
 
     // simulate the guard and track the path it follows
-    var guard = input.guard;
+    var guard = initial_guard.*;
     var loop_detected = false;
 
-    while (input.map.containsPosition(guard.position)) {
+    while (map.containsPosition(guard.position)) {
         // detect whether the guard is about to enter a loop by visiting
         // a position from earlier while facing the same way
         if (last_seen.get(guard.position)) |last_seen_direction| {
@@ -244,7 +260,7 @@ fn simulate(allocator: std.mem.Allocator, input: *const Input) !SimulationResult
 
         // turn the guard clockwise until it's not facing an obstable
         turn: for (0..std.meta.fields(Direction).len) |_| {
-            const forward_tile = input.map.getPosition(guard.position.move(guard.direction)) orelse {
+            const forward_tile = map.getPosition(guard.position.move(guard.direction)) orelse {
                 // position is off the map
                 break :turn;
             };
@@ -292,14 +308,68 @@ test "part1_example" {
     try input.init(std.testing.allocator, sample_input);
     defer input.deinit();
 
-    const results = try simulate(std.testing.allocator, &input);
+    const results = try simulate(std.testing.allocator, &input.map, &input.guard);
     defer results.deinit(std.testing.allocator);
 
     try std.testing.expectEqual(.guard_left_map, results.termination);
     try std.testing.expectEqual(41, results.unique_positions);
 }
 
+fn identify_loops(
+    allocator: std.mem.Allocator,
+    initial_map: *const TileMapUnmanaged,
+    initial_guard: *const Guard,
+) !usize {
+    const baseline = try simulate(allocator, initial_map, initial_guard);
+    defer baseline.deinit(allocator);
+
+    std.debug.assert(baseline.records.len > 1);
+    std.debug.assert(baseline.termination == .guard_left_map);
+
+    var obstacles = std.AutoHashMap(Position, bool).init(allocator);
+    defer obstacles.deinit();
+
+    for (baseline.records[1..]) |record| {
+        const guard = switch (record) {
+            .visit => |guard| guard,
+            else => continue,
+        };
+
+        if (obstacles.get(guard.position)) |_| {
+            continue;
+        }
+
+        var map: TileMapUnmanaged = .{};
+        try map.dupe(allocator, initial_map);
+        defer map.deinit(allocator);
+
+        map.setPosition(guard.position, .obstacle);
+
+        const results = try simulate(allocator, &map, initial_guard);
+        defer results.deinit(allocator);
+
+        if (results.termination == .guard_entered_loop) {
+            try obstacles.put(guard.position, true);
+        }
+    }
+
+    return obstacles.count();
+}
+
 test "part2_example" {
+    const no_loop =
+        \\....#.....
+        \\.........#
+        \\..........
+        \\..#.......
+        \\.......#..
+        \\..........
+        \\.#..^.....
+        \\........#.
+        \\#.........
+        \\......#...
+    ;
+
     const loop_option_one =
         \\....#.....
         \\....+---+#
@@ -398,11 +468,19 @@ test "part2_example" {
         try input.init(std.testing.allocator, simulation.input_data);
         defer input.deinit();
 
-        const results = try simulate(std.testing.allocator, &input);
+        const results = try simulate(std.testing.allocator, &input.map, &input.guard);
         defer results.deinit(std.testing.allocator);
 
         try std.testing.expectEqual(.guard_entered_loop, results.termination);
     }
+
+    // XXX
+    var input: Input = .{};
+    try input.init(std.testing.allocator, no_loop);
+    defer input.deinit();
+
+    const possible_loops = try identify_loops(std.testing.allocator, &input.map, &input.guard);
+    try std.testing.expectEqual(simulations.len, possible_loops);
 }
 
 // IMPLEMENTATION
@@ -414,11 +492,22 @@ fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     try std.testing.expectEqual(130, input.map.height);
     try std.testing.expectEqual(130, input.map.width);
 
-    const results = try simulate(allocator, &input);
+    const results = try simulate(allocator, &input.map, &input.guard);
     defer results.deinit(allocator);
 
     try std.testing.expectEqual(.guard_left_map, results.termination);
     return results.unique_positions;
+}
+
+fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
+    var input: Input = .{};
+    try input.init(allocator, input_data);
+    defer input.deinit();
+
+    try std.testing.expectEqual(130, input.map.height);
+    try std.testing.expectEqual(130, input.map.width);
+
+    return try identify_loops(allocator, &input.map, &input.guard);
 }
 
 pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
@@ -428,9 +517,9 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     try std.testing.expectEqual(5329, unique_positions);
     std.debug.print("unique positions: {d}\n", .{unique_positions});
 
-    // // part 2
-    // const total_invalid = try part2(allocator, input_data);
+    // part 2
+    const possible_loops = try part2(allocator, input_data);
 
-    // std.debug.assert(total_invalid == 5770);
-    // std.debug.print("total invalid: {d}\n", .{total_invalid});
+    try std.testing.expectEqual(2162, possible_loops);
+    std.debug.print("possible loops: {d}\n", .{possible_loops});
 }

@@ -21,8 +21,8 @@ pub fn build(b: *std.Build) void {
     });
 
     // XXX: use pkg-config for this?
-    binary.linkLibC();
-    binary.addObjectFile(.{ .cwd_relative = "/usr/lib/libtidy.a" });
+    //binary.linkLibC();
+    //binary.addObjectFile(.{ .cwd_relative = "/usr/lib/libtidy.a" });
 
     // XXX: dynamic linking
     // binary.linkLibC();

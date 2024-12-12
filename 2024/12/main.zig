@@ -778,9 +778,127 @@ test "detect_sides_part2_example2" {
     }
 }
 
+fn region_less_than(_: void, lhs: RegionUnmanaged, rhs: RegionUnmanaged) bool {
+    if (lhs.data != rhs.data) {
+        return lhs.data < rhs.data;
+    }
+
+    return lhs.area() < rhs.area();
+}
+
+const RegionTestData = struct {
+    data: Map.Data,
+    sides: usize,
+    area: usize,
+};
+
+fn region_test_data_less_than(_: void, lhs: RegionTestData, rhs: RegionTestData) bool {
+    if (lhs.data != rhs.data) {
+        return lhs.data < rhs.data;
+    }
+
+    return lhs.area < rhs.area;
+}
+
+test "part2_example2" {
+    const input_data =
+        \\RRRRIICCFF
+        \\RRRRIICCCF
+        \\VVRRRCCFFF
+        \\VVRCCCJFFF
+        \\VVVVCJJCFE
+        \\VVIVCCJJEE
+        \\VVIIICJJEE
+        \\MIIIIIJJEE
+        \\MIIISIJEEE
+        \\MMMISSJEEE
+    ;
+
+    const map = try parse_map(std.testing.allocator, input_data);
+    defer map.deinit();
+
+    const regions = try detect_regions(std.testing.allocator, &map);
+    defer regions.deinit(std.testing.allocator);
+
+    var region_test_data: [11]RegionTestData = .{
+        .{ .data = 'R', .area = 12, .sides = 10 },
+        .{ .data = 'I', .area = 4,  .sides = 4 },
+        .{ .data = 'C', .area = 14, .sides = 22 },
+        .{ .data = 'F', .area = 10, .sides = 12 },
+        .{ .data = 'V', .area = 13, .sides = 10 },
+        .{ .data = 'J', .area = 11, .sides = 12 },
+        .{ .data = 'C', .area = 1,  .sides = 4 },
+        .{ .data = 'E', .area = 13, .sides = 8 },
+        .{ .data = 'I', .area = 14, .sides = 16 },
+        .{ .data = 'M', .area = 5,  .sides = 6 },
+        .{ .data = 'S', .area = 3,  .sides = 6 },
+    };
+
+    std.sort.block(RegionUnmanaged, regions.regions, {}, region_less_than);
+    std.sort.block(RegionTestData, &region_test_data, {}, region_test_data_less_than);
+
+    var total_price: usize = 0;
+    try std.testing.expectEqual(11, regions.regions.len);
+    for (region_test_data, regions.regions) |expected, actual| {
+        try std.testing.expectEqual(expected.data, actual.data);
+        try std.testing.expectEqual(expected.area, actual.area());
+
+        const sides = try detect_sides(std.testing.allocator, &map, &actual);
+        defer std.testing.allocator.free(sides);
+
+        try std.testing.expectEqual(expected.sides, sides.len);
+        total_price += (actual.area() * sides.len);
+    }
+
+    try std.testing.expectEqual(1206, total_price);
+}
+
+test "part2_example1" {
+    const input_data =
+        \\AAAAAA
+        \\AAABBA
+        \\AAABBA
+        \\ABBAAA
+        \\ABBAAA
+        \\AAAAAA
+    ;
+
+    const map = try parse_map(std.testing.allocator, input_data);
+    defer map.deinit();
+
+    const regions = try detect_regions(std.testing.allocator, &map);
+    defer regions.deinit(std.testing.allocator);
+
+    var region_test_data: [3]RegionTestData = .{
+        .{ .data = 'A', .area = 28, .sides = 12 },
+        .{ .data = 'B', .area = 4,  .sides = 4 },
+        .{ .data = 'B', .area = 4,  .sides = 4 },
+    };
+
+    std.sort.block(RegionUnmanaged, regions.regions, {}, region_less_than);
+    std.sort.block(RegionTestData, &region_test_data, {}, region_test_data_less_than);
+
+    var total_price: usize = 0;
+    for (region_test_data, regions.regions) |expected, actual| {
+        try std.testing.expectEqual(expected.data, actual.data);
+        try std.testing.expectEqual(expected.area, actual.area());
+
+        const sides = try detect_sides(std.testing.allocator, &map, &actual);
+        defer std.testing.allocator.free(sides);
+
+        try std.testing.expectEqual(expected.sides, sides.len);
+        total_price += (actual.area() * sides.len);
+    }
+
+    try std.testing.expectEqual(368, total_price);
+}
+
 fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     const map = try parse_map(allocator, input_data);
     defer map.deinit();
+
+    try std.testing.expectEqual(140, map.width);
+    try std.testing.expectEqual(140, map.height);
 
     const regions = try detect_regions(allocator, &map);
     defer regions.deinit(allocator);

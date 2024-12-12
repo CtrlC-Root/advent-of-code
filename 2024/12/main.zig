@@ -640,6 +640,13 @@ fn detect_sides(allocator: std.mem.Allocator, map: *const Map, region: *const Re
         for (0..map.height) |cross_axis| {
             const position: Position = .{ .x = px, .y = @intCast(cross_axis) };
             if (side_map.get(position, direction)) {
+                if (cross_axis > 0 and side_map.get(position, .north)) {
+                    if (side) |current_side| {
+                        try sides.append(current_side);
+                        side = null;
+                    }
+                }
+
                 if (side) |*current_side| {
                     current_side.*.cross_axis_end = @intCast(cross_axis + 1);
                 } else {
@@ -673,6 +680,13 @@ fn detect_sides(allocator: std.mem.Allocator, map: *const Map, region: *const Re
         for (0..map.width) |cross_axis| {
             const position: Position = .{ .x = @intCast(cross_axis), .y = py };
             if (side_map.get(position, direction)) {
+                if (cross_axis > 0 and side_map.get(position, .west)) {
+                    if (side) |current_side| {
+                        try sides.append(current_side);
+                        side = null;
+                    }
+                }
+
                 if (side) |*current_side| {
                     current_side.cross_axis_end = @intCast(cross_axis + 1);
                 } else {

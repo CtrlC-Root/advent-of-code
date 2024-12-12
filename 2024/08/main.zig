@@ -149,7 +149,7 @@ test "parse_input" {
     try input.init(std.testing.allocator, input_data);
     defer input.deinit();
 
-    try std.testing.expect(input.map.size.equals(Vec2d{ .x = 10, .y = 10}));
+    try std.testing.expect(input.map.size.equals(Vec2d{ .x = 10, .y = 10 }));
     try std.testing.expectEqual(3, input.map.tiles.count());
     try std.testing.expectEqual(1, input.map.antennas.count());
 

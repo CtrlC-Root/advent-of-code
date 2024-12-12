@@ -100,8 +100,12 @@ fn validate_equation_part1(equation: *const InputEquation) bool {
         var result: InputEquation.Term = terms[0];
         for (operators, terms[1..]) |operator, term| {
             switch (operator) {
-                .addition => { result += term; },
-                .multiplication => { result *= term; },
+                .addition => {
+                    result += term;
+                },
+                .multiplication => {
+                    result *= term;
+                },
             }
         }
 
@@ -150,15 +154,15 @@ test "validate_equation_part1" {
     };
 
     const test_cases: []const TestCase = &.{
-        .{ .expected = true,  .actual = validate_equation_part1(&input.equations[0]) },
-        .{ .expected = true,  .actual = validate_equation_part1(&input.equations[1]) },
+        .{ .expected = true, .actual = validate_equation_part1(&input.equations[0]) },
+        .{ .expected = true, .actual = validate_equation_part1(&input.equations[1]) },
         .{ .expected = false, .actual = validate_equation_part1(&input.equations[2]) },
         .{ .expected = false, .actual = validate_equation_part1(&input.equations[3]) },
         .{ .expected = false, .actual = validate_equation_part1(&input.equations[4]) },
         .{ .expected = false, .actual = validate_equation_part1(&input.equations[5]) },
         .{ .expected = false, .actual = validate_equation_part1(&input.equations[6]) },
         .{ .expected = false, .actual = validate_equation_part1(&input.equations[7]) },
-        .{ .expected = true,  .actual = validate_equation_part1(&input.equations[8]) },
+        .{ .expected = true, .actual = validate_equation_part1(&input.equations[8]) },
     };
 
     for (test_cases) |test_case| {
@@ -188,8 +192,12 @@ fn validate_equation_part2(equation: *const InputEquation) bool {
         var result: InputEquation.Term = terms[0];
         for (operators, terms[1..]) |operator, term| {
             switch (operator) {
-                .addition => { result += term; },
-                .multiplication => { result *= term; },
+                .addition => {
+                    result += term;
+                },
+                .multiplication => {
+                    result *= term;
+                },
                 .concatenation => {
                     const result_digits = std.fmt.bufPrint(&concatenate_buffer, "{d}{d}", .{ result, term }) catch unreachable;
                     result = std.fmt.parseInt(InputEquation.Term, result_digits, 10) catch unreachable;
@@ -242,15 +250,15 @@ test "validate_equation_part2" {
     };
 
     const test_cases: []const TestCase = &.{
-        .{ .expected = true,  .actual = validate_equation_part2(&input.equations[0]) },
-        .{ .expected = true,  .actual = validate_equation_part2(&input.equations[1]) },
+        .{ .expected = true, .actual = validate_equation_part2(&input.equations[0]) },
+        .{ .expected = true, .actual = validate_equation_part2(&input.equations[1]) },
         .{ .expected = false, .actual = validate_equation_part2(&input.equations[2]) },
-        .{ .expected = true,  .actual = validate_equation_part2(&input.equations[3]) },
-        .{ .expected = true,  .actual = validate_equation_part2(&input.equations[4]) },
+        .{ .expected = true, .actual = validate_equation_part2(&input.equations[3]) },
+        .{ .expected = true, .actual = validate_equation_part2(&input.equations[4]) },
         .{ .expected = false, .actual = validate_equation_part2(&input.equations[5]) },
-        .{ .expected = true,  .actual = validate_equation_part2(&input.equations[6]) },
+        .{ .expected = true, .actual = validate_equation_part2(&input.equations[6]) },
         .{ .expected = false, .actual = validate_equation_part2(&input.equations[7]) },
-        .{ .expected = true,  .actual = validate_equation_part2(&input.equations[8]) },
+        .{ .expected = true, .actual = validate_equation_part2(&input.equations[8]) },
     };
 
     for (test_cases) |test_case| {

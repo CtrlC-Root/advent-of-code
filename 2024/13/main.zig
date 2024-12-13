@@ -459,7 +459,7 @@ pub fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
     try input.init(allocator, input_data);
     defer input.deinit();
 
-    try std.testing.expectEqual(320, input.machines.len);
+    try std.testing.expectEqual(320, input.machines.items.len);
 
     var total_cost: usize = 0;
     for (input.machines.items) |*machine| {
@@ -467,8 +467,17 @@ pub fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
             continue;
         };
 
-        if (results.press_a < 0 or results.press_a > 100 or results.press_b < 0 or results.press_b > 100) {
+        const actual_prize = Vec2d.sum(
+            machine.button_a.multiplyScalar(results.press_a),
+            machine.button_b.multiplyScalar(results.press_b),
+        );
+
+        if (!actual_prize.equals(machine.prize)) {
             continue;
+        }
+
+        if (results.press_a < 0 or results.press_a > 100 or results.press_b < 0 or results.press_b > 100) {
+            unreachable;
         }
 
         const machine_cost = (3 * @as(usize, @intCast(results.press_a))) + (1 * @as(usize, @intCast(results.press_b)));
@@ -482,7 +491,10 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part 1
     const tokens = try part1(allocator, input_data);
 
-    // try std.testing.expectEqual(37513, tokens); // too high
+    // too high: 37513
+    // too low: 22049
+
+    // try std.testing.expectEqual(37513, tokens);
     std.debug.print("tokens: {d}\n", .{tokens});
 
     // part 2

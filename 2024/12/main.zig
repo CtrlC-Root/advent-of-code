@@ -574,13 +574,13 @@ test "create_side_map" {
     const side_map = try create_side_map(std.testing.allocator, &map, &region);
     defer side_map.deinit();
 
-    const position_a = Position{ .x = 2, .y = 1};
+    const position_a = Position{ .x = 2, .y = 1 };
     try std.testing.expect(side_map.get(position_a, .north));
     try std.testing.expect(side_map.get(position_a, .east));
     try std.testing.expect(side_map.get(position_a, .west));
     try std.testing.expect(!side_map.get(position_a, .south));
 
-    const position_b = Position{ .x = 2, .y = 2};
+    const position_b = Position{ .x = 2, .y = 2 };
     try std.testing.expect(!side_map.get(position_b, .north));
     try std.testing.expect(!side_map.get(position_b, .east));
     try std.testing.expect(side_map.get(position_b, .west));
@@ -836,16 +836,16 @@ test "part2_example2" {
 
     var region_test_data: [11]RegionTestData = .{
         .{ .data = 'R', .area = 12, .sides = 10 },
-        .{ .data = 'I', .area = 4,  .sides = 4 },
+        .{ .data = 'I', .area = 4, .sides = 4 },
         .{ .data = 'C', .area = 14, .sides = 22 },
         .{ .data = 'F', .area = 10, .sides = 12 },
         .{ .data = 'V', .area = 13, .sides = 10 },
         .{ .data = 'J', .area = 11, .sides = 12 },
-        .{ .data = 'C', .area = 1,  .sides = 4 },
+        .{ .data = 'C', .area = 1, .sides = 4 },
         .{ .data = 'E', .area = 13, .sides = 8 },
         .{ .data = 'I', .area = 14, .sides = 16 },
-        .{ .data = 'M', .area = 5,  .sides = 6 },
-        .{ .data = 'S', .area = 3,  .sides = 6 },
+        .{ .data = 'M', .area = 5, .sides = 6 },
+        .{ .data = 'S', .area = 3, .sides = 6 },
     };
 
     std.sort.block(RegionUnmanaged, regions.regions, {}, region_less_than);
@@ -885,8 +885,8 @@ test "part2_example1" {
 
     var region_test_data: [3]RegionTestData = .{
         .{ .data = 'A', .area = 28, .sides = 12 },
-        .{ .data = 'B', .area = 4,  .sides = 4 },
-        .{ .data = 'B', .area = 4,  .sides = 4 },
+        .{ .data = 'B', .area = 4, .sides = 4 },
+        .{ .data = 'B', .area = 4, .sides = 4 },
     };
 
     std.sort.block(RegionUnmanaged, regions.regions, {}, region_less_than);
@@ -925,7 +925,7 @@ fn part2(allocator: std.mem.Allocator, input_data: []const u8) !usize {
         total_price += (region.area() * sides.len);
     }
 
-    return total_price; 
+    return total_price;
 }
 
 pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
@@ -938,6 +938,6 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part 2
     const price_sides = try part2(allocator, input_data);
 
-    // try std.testing.expectEqual(897612, price_sides); // too low
+    try std.testing.expectEqual(908042, price_sides);
     std.debug.print("price sides: {d}\n", .{price_sides});
 }

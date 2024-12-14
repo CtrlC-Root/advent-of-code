@@ -197,210 +197,32 @@ test "input_parse" {
     }));
 }
 
-pub fn MatrixUnmanaged(comptime T: type) type {
-    return struct {
-        const Self = @This();
-        const Index = usize;
-        const Value = T;
-
-        rows: Index = undefined,
-        columns: Index = undefined,
-        data: []Value = undefined,
-
-        pub fn init(self: *Self, allocator: std.mem.Allocator, rows: Index, columns: Index) !void {
-            const data = try allocator.alloc(Value, rows * columns);
-            errdefer allocator.free(data);
-
-            for (0..(rows * columns)) |index| {
-                data[index] = 0;
-            }
-
-            self.* = .{
-                .rows = rows,
-                .columns = columns,
-                .data = data,
-            };
-        }
-
-        pub fn dupe(self: *Self, allocator: std.mem.Allocator, other: *const Self) !void {
-            const data = try allocator.dupe(Value, other.data);
-            errdefer allocator.free(data);
-
-            self.* = .{
-                .rows = other.rows,
-                .columns = other.columns,
-                .data = data,
-            };
-        }
-
-        pub fn deinit(self: Self, allocator: std.mem.Allocator) void {
-            allocator.free(self.data);
-        }
-
-        pub fn get(self: Self, row: Index, column: Index) Value {
-            std.debug.assert(row < self.rows);
-            std.debug.assert(column < self.columns);
-
-            const index = (row * self.columns) + column;
-            return self.data[index];
-        }
-
-        pub fn set(self: *Self, row: Index, column: Index, value: Value) void {
-            std.debug.assert(row < self.rows);
-            std.debug.assert(column < self.columns);
-
-            const index = (row * self.columns) + column;
-            self.data[index] = value;
-        }
-    };
-}
-
-const IntMatrixUnmanaged = MatrixUnmanaged(Vec2d.Value);
-const FloatMatrixUnmanaged = MatrixUnmanaged(f64);
-
-// https://www.baeldung.com/cs/solving-system-linear-equations
-fn solve(allocator: std.mem.Allocator, system: *const IntMatrixUnmanaged) !IntMatrixUnmanaged {
-    // system matix: NxN coefficients, Nx1 results
-    std.debug.assert(system.rows >= 2);
-    std.debug.assert(system.columns == (system.rows + 1));
-
-    var work: FloatMatrixUnmanaged = .{};
-    try work.init(allocator, system.rows, system.columns);
-    defer work.deinit(allocator);
-
-    for (0..system.rows) |row| {
-        for (0..system.columns) |column| {
-            work.set(row, column, @floatFromInt(system.get(row, column)));
-        }
-    }
-
-    // guassian elimination
-    // https://en.wikipedia.org/wiki/Gaussian_elimination#Pseudocode
-    for (0..work.rows) |i| {
-        const pivot = work.get(i, i);
-        if (work.get(i, i) == 0.0) {
-            return error.SystemNotSolvable;
-        }
-
-        for ((i + 1)..work.rows) |j| {
-            const ratio = work.get(j, i) / pivot;
-            for (0..work.columns) |k| {
-                work.set(j, k, work.get(j, k) - (ratio * work.get(i, k)));
-            }
-        }
-    }
-
-    // back substitution
-    var results = FloatMatrixUnmanaged{};
-    try results.init(allocator, work.rows, 1);
-    defer results.deinit(allocator);
-
-    for (0..work.rows) |reverse_i| {
-        const i = work.rows - reverse_i - 1;
-
-        var sum: FloatMatrixUnmanaged.Value = 0;
-        for ((i + 1)..work.rows) |j| {
-            sum += results.get(j, 0) * work.get(i, j);
-        }
-
-        results.set(i, 0, (1.0 / work.get(i, i)) * (work.get(i, work.columns - 1) - sum));
-    }
-
-    // convert results into integer matrix
-    var solution = IntMatrixUnmanaged{};
-    try solution.init(allocator, results.rows, 1);
-    errdefer solution.deinit(allocator);
-
-    for (0..results.rows) |row| {
-        solution.set(row, 0, @intFromFloat(results.get(row, 0)));
-    }
-
-    return solution;
-}
-
-test "solve" {
-    var system: IntMatrixUnmanaged = .{};
-    try system.init(std.testing.allocator, 3, 4);
-    defer system.deinit(std.testing.allocator);
-
-    // 2x + 1y - 1z = 8
-    system.set(0, 0, 2);
-    system.set(0, 1, 1);
-    system.set(0, 2, -1);
-    system.set(0, 3, 8);
-
-    // -3x - 1y + 2z = -11
-    system.set(1, 0, -3);
-    system.set(1, 1, -1);
-    system.set(1, 2, 2);
-    system.set(1, 3, -11);
-
-    // -2x + 1y + 2x = -3
-    system.set(2, 0, -2);
-    system.set(2, 1, 1);
-    system.set(2, 2, 2);
-    system.set(2, 3, -3);
-
-    const solution = try solve(std.testing.allocator, &system);
-    defer solution.deinit(std.testing.allocator);
-
-    try std.testing.expectEqual(system.rows, solution.rows);
-    try std.testing.expectEqual(1, solution.columns);
-
-    // x = 2, y = 3, z = -1
-    try std.testing.expectEqual(2, solution.get(0, 0));
-    try std.testing.expectEqual(3, solution.get(1, 0));
-    try std.testing.expectEqual(-1, solution.get(2, 0));
-}
-
 const EvaluateMachineResults = struct {
     const Self = @This();
 
-    press_a: IntMatrixUnmanaged.Value,
-    press_b: IntMatrixUnmanaged.Value,
+    press_a: usize,
+    press_b: usize,
 };
 
-fn evaluate_machine(allocator: std.mem.Allocator, machine: *const Machine) !EvaluateMachineResults {
-    // linear system of two equations with two unknowns (press_a and press_b)
-    // (button_a.x * press_a) + (button_b.x * press_b) = prize.x
-    // (button_a.y * press_a) + (button_b.y * press_b) = prize.y
+fn evaluate_machine_part1(machine: *const Machine) ?EvaluateMachineResults {
+    for (0..101) |press_a| {
+        for (0..101) |press_b| {
+            const results: EvaluateMachineResults = .{ .press_a = press_a, .press_b = press_b };
+            const target = Vec2d.sum(
+                machine.button_a.multiplyScalar(@intCast(results.press_a)),
+                machine.button_b.multiplyScalar(@intCast(results.press_b)),
+            );
 
-    var system = IntMatrixUnmanaged{};
-    try system.init(allocator, 2, 3);
-    defer system.deinit(allocator);
+            if (target.equals(machine.prize)) {
+                return results;
+            }
+        }
+    }
 
-    system.set(0, 0, machine.button_a.x);
-    system.set(1, 0, machine.button_a.y);
-    system.set(0, 1, machine.button_b.x);
-    system.set(1, 1, machine.button_b.y);
-    system.set(0, 2, machine.prize.x);
-    system.set(1, 2, machine.prize.y);
-
-    var output = try solve(allocator, &system);
-    defer output.deinit(allocator);
-
-    std.debug.assert(output.rows == system.rows);
-    std.debug.assert(output.columns == 1);
-
-    // XXX
-    // const press_a = output.get(0, 0);
-    // const press_b = output.get(1, 0);
-    // const prize = Vec2d.sum(
-    //     machine.button_a.multiplyScalar(press_a),
-    //     machine.button_b.multiplyScalar(press_b),
-    // );
-
-    // std.debug.print("Ax{} + Bx{} = {}\n", .{ press_a, press_b, prize });
-    // std.debug.assert(machine.prize.equals(prize));
-
-    // system can be solved
-    return .{
-        .press_a = output.get(0, 0),
-        .press_b = output.get(1, 0),
-    };
+    return null;
 }
 
-test "evaluate_machine" {
+test "evaluate_machine_part1" {
     const multiple_machines_data =
         \\Button A: X+94, Y+34
         \\Button B: X+22, Y+67
@@ -438,16 +260,11 @@ test "evaluate_machine" {
     try std.testing.expectEqual(expected_outputs.len, input.machines.items.len);
     for (expected_outputs, input.machines.items) |expected_output, *machine| {
         const actual_output: Output = determine_output: {
-            const results = evaluate_machine(std.testing.allocator, machine) catch |err| {
-                try std.testing.expectEqual(error.SystemNotSolvable, err);
-                break :determine_output Output.impossible;
-            };
-
-            if (results.press_a > 100 or results.press_b > 100) {
+            if (evaluate_machine_part1(machine)) |results| {
+                break :determine_output Output{ .possible = results };
+            } else {
                 break :determine_output Output.impossible;
             }
-
-            break :determine_output Output{ .possible = results };
         };
 
         try std.testing.expectEqualDeep(expected_output, actual_output);
@@ -463,25 +280,10 @@ pub fn part1(allocator: std.mem.Allocator, input_data: []const u8) !usize {
 
     var total_cost: usize = 0;
     for (input.machines.items) |*machine| {
-        const results = evaluate_machine(allocator, machine) catch {
-            continue;
-        };
-
-        const actual_prize = Vec2d.sum(
-            machine.button_a.multiplyScalar(results.press_a),
-            machine.button_b.multiplyScalar(results.press_b),
-        );
-
-        if (!actual_prize.equals(machine.prize)) {
-            continue;
+        if (evaluate_machine_part1(machine)) |results| {
+            const machine_cost = (3 * @as(usize, @intCast(results.press_a))) + (1 * @as(usize, @intCast(results.press_b)));
+            total_cost += machine_cost;
         }
-
-        if (results.press_a < 0 or results.press_a > 100 or results.press_b < 0 or results.press_b > 100) {
-            unreachable;
-        }
-
-        const machine_cost = (3 * @as(usize, @intCast(results.press_a))) + (1 * @as(usize, @intCast(results.press_b)));
-        total_cost += machine_cost;
     }
 
     return total_cost;
@@ -491,10 +293,7 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part 1
     const tokens = try part1(allocator, input_data);
 
-    // too high: 37513
-    // too low: 22049
-
-    // try std.testing.expectEqual(37513, tokens);
+    try std.testing.expectEqual(34393, tokens);
     std.debug.print("tokens: {d}\n", .{tokens});
 
     // part 2

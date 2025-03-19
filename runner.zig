@@ -34,20 +34,20 @@ const Solution = struct {
 };
 
 const solutions = std.StaticStringMap(Solution).initComptime(&.{
-    .{ "2024-01", .{ .year = 2024, .day = 1, .run = &solution_2024_01.run } },
-    .{ "2024-02", .{ .year = 2024, .day = 2, .run = &solution_2024_02.run } },
-    .{ "2024-03", .{ .year = 2024, .day = 3, .run = &solution_2024_03.run } },
-    .{ "2024-04", .{ .year = 2024, .day = 4, .run = &solution_2024_04.run } },
-    .{ "2024-05", .{ .year = 2024, .day = 5, .run = &solution_2024_05.run } },
-    .{ "2024-06", .{ .year = 2024, .day = 6, .run = &solution_2024_06.run } },
-    .{ "2024-07", .{ .year = 2024, .day = 7, .run = &solution_2024_07.run } },
-    .{ "2024-08", .{ .year = 2024, .day = 8, .run = &solution_2024_08.run } },
-    .{ "2024-09", .{ .year = 2024, .day = 9, .run = &solution_2024_09.run } },
-    .{ "2024-10", .{ .year = 2024, .day = 10, .run = &solution_2024_10.run } },
-    .{ "2024-12", .{ .year = 2024, .day = 12, .run = &solution_2024_12.run } },
-    .{ "2024-13", .{ .year = 2024, .day = 13, .run = &solution_2024_13.run } },
-    .{ "2024-22", .{ .year = 2024, .day = 22, .run = &solution_2024_22.run } },
-    .{ "2024-24", .{ .year = 2024, .day = 24, .run = &solution_2024_24.run } },
+    .{ "2024-01", Solution{ .year = 2024, .day = 1, .run = &solution_2024_01.run } },
+    .{ "2024-02", Solution{ .year = 2024, .day = 2, .run = &solution_2024_02.run } },
+    .{ "2024-03", Solution{ .year = 2024, .day = 3, .run = &solution_2024_03.run } },
+    .{ "2024-04", Solution{ .year = 2024, .day = 4, .run = &solution_2024_04.run } },
+    .{ "2024-05", Solution{ .year = 2024, .day = 5, .run = &solution_2024_05.run } },
+    .{ "2024-06", Solution{ .year = 2024, .day = 6, .run = &solution_2024_06.run } },
+    .{ "2024-07", Solution{ .year = 2024, .day = 7, .run = &solution_2024_07.run } },
+    .{ "2024-08", Solution{ .year = 2024, .day = 8, .run = &solution_2024_08.run } },
+    .{ "2024-09", Solution{ .year = 2024, .day = 9, .run = &solution_2024_09.run } },
+    .{ "2024-10", Solution{ .year = 2024, .day = 10, .run = &solution_2024_10.run } },
+    .{ "2024-12", Solution{ .year = 2024, .day = 12, .run = &solution_2024_12.run } },
+    .{ "2024-13", Solution{ .year = 2024, .day = 13, .run = &solution_2024_13.run } },
+    .{ "2024-22", Solution{ .year = 2024, .day = 22, .run = &solution_2024_22.run } },
+    .{ "2024-24", Solution{ .year = 2024, .day = 24, .run = &solution_2024_24.run } },
 });
 
 fn fetch_input_data(

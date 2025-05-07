@@ -239,6 +239,40 @@ fn part1(allocator: std.mem.Allocator, input_data: []const u8) !i64 {
     return lowest_location;
 }
 
+fn part2(allocator: std.mem.Allocator, input_data: []const u8) !i64 {
+    var input: Input = .{};
+    try input.initWithInput(allocator, input_data);
+    defer input.deinit(allocator);
+
+    const range_names: []const []const u8 = &.{
+        "seed-to-soil",
+        "soil-to-fertilizer",
+        "fertilizer-to-water",
+        "water-to-light",
+        "light-to-temperature",
+        "temperature-to-humidity",
+        "humidity-to-location",
+    };
+
+    var lowest_location: RangeMap.Value = std.math.maxInt(RangeMap.Value);
+    for (0..@divFloor(input.seeds.len, 2)) |index| {
+        const start = input.seeds[index * 2];
+        const length = input.seeds[(index * 2) + 1];
+
+        for (@intCast(start)..@intCast(start + length)) |seed| {
+            var value: RangeMap.Value = @intCast(seed);
+            for (range_names) |range_name| {
+                const range = input.ranges.getPtr(range_name) orelse return error.InvalidInput;
+                value = range.transform(value);
+            }
+
+            lowest_location = @min(lowest_location, value);
+        }
+    }
+
+    return lowest_location;
+}
+
 pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     // part 1
     const part1_result = try part1(allocator, input_data);
@@ -247,8 +281,8 @@ pub fn run(allocator: std.mem.Allocator, input_data: []const u8) !void {
     std.debug.print("part1: {d}\n", .{part1_result});
 
     // part 2
-    // const part2_result = try part2(allocator, input_data);
+    const part2_result = try part2(allocator, input_data);
 
-    // try std.testing.expectEqual(897612, price_sides);
-    // std.debug.print("part2 total: {d}\n", .{part2_result});
+    try std.testing.expectEqual(99751240, part2_result);
+    std.debug.print("part2 total: {d}\n", .{part2_result});
 }

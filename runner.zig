@@ -8,6 +8,7 @@ const std = @import("std");
 
 const solution_2023_03 = @import("2023/03/main.zig");
 const solution_2023_04 = @import("2023/04/main.zig");
+const solution_2023_05 = @import("2023/05/main.zig");
 
 const solution_2024_01 = @import("2024/01/main.zig");
 const solution_2024_02 = @import("2024/02/main.zig");
@@ -39,6 +40,7 @@ const Solution = struct {
 const solutions = std.StaticStringMap(Solution).initComptime(&.{
     .{ "2023-03", Solution{ .year = 2023, .day = 3, .run = &solution_2023_03.run } },
     .{ "2023-04", Solution{ .year = 2023, .day = 4, .run = &solution_2023_04.run } },
+    .{ "2023-05", Solution{ .year = 2023, .day = 5, .run = &solution_2023_05.run } },
 
     .{ "2024-01", Solution{ .year = 2024, .day = 1, .run = &solution_2024_01.run } },
     .{ "2024-02", Solution{ .year = 2024, .day = 2, .run = &solution_2024_02.run } },
